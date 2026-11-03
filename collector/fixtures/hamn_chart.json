@@ -1,0 +1,11 @@
+{"d":{"__type":"HAMN_Reporting.ChartData","nStations":3,"nParameters":1,"totalSelected":3,
+"fromDate":1793538000000,"toDate":1793624400000,
+"colDef":[
+{"stationParameterId":69,"station":"COH_MBL1","parameter":"SO2","units":"ppb","format":"#0"},
+{"stationParameterId":89,"station":"STN29102 Beach Blvd","parameter":"SO2","units":"ppb","format":"#0"},
+{"stationParameterId":111,"station":"STN29667","parameter":"SO2","units":"ppb","format":"#0"}],
+"colection":[
+{"date":1793491200000,"values":"0,3,0"},
+{"date":1793541600000,"values":"0,2,27"},
+{"date":1793545200000,"values":"0,2,80"},
+{"date":1793548800000,"values":",1,x"}]}}
