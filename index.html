@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hamilton Air Quality</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
   :root {
     color-scheme: light;
@@ -108,95 +109,4 @@
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
   thead th { color: var(--ink2); font-weight: 600; font-size: 13px; position: sticky; top: 0; background: var(--surface); }
   th[scope="row"] { font-weight: 600; white-space: nowrap; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  thead th.num { text-align: right; }
-  .when { font-size: 12px; }
-  .flag { color: var(--flag-text); font-weight: 600; font-size: 13px; }
-  .wide-scroll { overflow-x: auto; }
-  th .key, td .key { margin-right: 8px; }
-  footer { margin-top: 32px; color: var(--ink2); font-size: 13px; display: grid; gap: 6px; }
-  footer a { color: inherit; }
-  .group-title { grid-column: 1 / -1; font-size: 15px; color: var(--ink2); margin: 8px 0 0; }
-  #current { display: grid; gap: 12px; }
-  #current .group-title { margin: 8px 0 -4px; }
-  .chip[disabled] { opacity: .65; cursor: not-allowed; }
-  @media (max-width: 560px) {
-    .hero-value { font-size: 48px; }
-    .card { padding: 12px; }
-  }
-</style>
-</head>
-<body>
-<main>
-  <header>
-    <h1>Hamilton air quality</h1>
-    <p class="lede"><span id="lede-text"></span> Latest reading: <span id="updated">loading…</span></p>
-  </header>
-
-  <p id="status" class="status" role="alert" hidden></p>
-
-  <div id="app" hidden>
-    <div class="filters">
-      <div class="group" id="source" role="group" aria-label="Monitoring network"></div>
-    </div>
-    <div id="dash">
-    <div class="filters">
-      <div class="group" id="range" role="group" aria-label="Date range"></div>
-      <div class="group"><label class="label" for="resolution">Chart detail</label><select id="resolution"></select></div>
-      <div class="group" id="legend" role="group" aria-label="Stations"></div>
-    </div>
-
-    <section class="card" aria-labelledby="hero-label">
-      <div class="hero">
-        <div class="hero-value" id="hero-value">0</div>
-        <div>
-          <div class="hero-label" id="hero-label">Hours above Ontario 1-hour guidelines</div>
-          <div class="sub" id="hero-range"></div>
-        </div>
-      </div>
-      <p class="hero-detail" id="hero-detail"></p>
-    </section>
-
-    <h2>Latest readings</h2>
-    <div id="current"></div>
-
-    <h2>Trends</h2>
-    <div class="grid-cards" id="charts"></div>
-
-    <h2>Typical day</h2>
-    <article class="card">
-      <div class="card-head">
-        <div>
-          <h3>Pattern by hour of day</h3>
-          <p class="sub" id="profile-sub"></p>
-        </div>
-        <button type="button" class="link-btn" id="profile-toggle">Show table</button>
-      </div>
-      <div class="group" style="margin-bottom:8px"><label class="label" for="profile-pol">Pollutant</label><select id="profile-pol"></select></div>
-      <div id="profile-chart"></div>
-    </article>
-
-    <h2>Station comparison</h2>
-    <div class="card wide-scroll">
-      <table>
-        <thead><tr>
-          <th scope="col">Pollutant</th><th scope="col">Station</th>
-          <th scope="col" class="num">Mean</th><th scope="col" class="num">Median</th><th scope="col" class="num">95th percentile</th>
-          <th scope="col" class="num">Peak</th><th scope="col">Peak hour</th>
-          <th scope="col" class="num">Hours above guideline</th><th scope="col" class="num">Data coverage</th>
-        </tr></thead>
-        <tbody id="summary-body"></tbody>
-      </table>
-    </div>
-    <p class="note">Peak, mean and the other figures use hourly readings in the selected date range. Data coverage is the share of hours with a reading since each station's first reading in the range.</p>
-
-    <footer>
-      <p id="source-note"></p>
-      <p id="guide-note"></p>
-    </footer>
-    </div>
-  </div>
-</main>
-<script src="dashboard.js"></script>
-</body>
-</html>
+  td.num { text-align: right; font-variant-numeric: tabular-nums;
