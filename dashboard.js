@@ -12,9 +12,9 @@
   // guideline = Ontario 1-hour ambient air quality criterion, as listed by Air Quality Ontario.
   // Only guidelines that were confirmed are set; everything else is shown without one.
   const AQO_STATIONS = [
-    { id: '29000', name: 'Hamilton Downtown', color: 'var(--s1)' },
-    { id: '29214', name: 'Hamilton Mountain', color: 'var(--s2)' },
-    { id: '29118', name: 'Hamilton West', color: 'var(--s3)' },
+    { id: '29000', name: 'Hamilton Downtown', color: 'var(--s1)', lat: 43.21778, lon: -79.781664 },
+    { id: '29214', name: 'Hamilton Mountain', color: 'var(--s2)', lat: 43.161324, lon: -79.889328 },
+    { id: '29118', name: 'Hamilton West', color: 'var(--s3)', lat: 43.257444, lon: -79.90775 },
   ];
   const AQO_POLLUTANTS = [
     { id: 'O3', name: 'Ground-level ozone', label: 'O₃', unit: 'ppb', guideline: 80 },
@@ -24,13 +24,20 @@
     { id: 'CO', name: 'Carbon monoxide', label: 'CO', unit: 'ppm', guideline: 30 },
   ];
 
-  // HAMN station names are the identifiers the portal publishes.
+  // HAMN station names are the identifiers the portal publishes; positions come from the portal's own station list.
   const HAMN_STATIONS = [
-    'COH_MBL1', 'STN29102 Beach Blvd', 'STN29153 Parkdale Ave N', 'STN29164', 'STN29167 Arcelormittal',
-    'STN29168 Christophers Park', 'STN29171 Stelco', 'STN29175 Jones Road', 'STN29180 Gage Ave N',
-    'STN29247 GFL Facility', 'STN29565 Strathearne Ave', 'STN29667',
-    'GFL Lagoon', 'GFL North', 'GFL SouthEast', 'GFL_NW', 'RC East', 'RC North', 'RC South', 'RC West',
-  ].map((n) => ({ id: n, name: n }));
+    ['COH_MBL1', 43.159969, -79.911099, 'Mobile station: the position shown is where the portal currently places it'],
+    ['STN29102 Beach Blvd', 43.275479, -79.779834], ['STN29153 Parkdale Ave N', 43.25472, -79.783535],
+    ['STN29164', 43.2676, -79.777137], ['STN29167 Arcelormittal', 43.279131, -79.798799],
+    ['STN29168 Christophers Park', 43.25507, -79.808216], ['STN29171 Stelco', 43.279737, -79.821563],
+    ['STN29175 Jones Road', 43.221818, -79.689814], ['STN29180 Gage Ave N', 43.260007, -79.823274],
+    ['STN29247 GFL Facility', 43.200016, -79.770459], ['STN29565 Strathearne Ave', 43.249843, -79.794866],
+    ['STN29667', 43.269898, -79.841731],
+    ['GFL Lagoon', 43.200083, -79.78156], ['GFL North', 43.200016, -79.7711],
+    ['GFL SouthEast', 43.19325, -79.768618], ['GFL_NW', 43.200867, -79.775657],
+    ['RC East', 43.262718, -79.790017], ['RC North', 43.264074, -79.790143],
+    ['RC South', 43.261663, -79.791591], ['RC West', 43.26344, -79.791917],
+  ].map(([n, lat, lon, note]) => ({ id: n, name: n, lat, lon, note }));
   const AIR = 'Air quality';
   const WEATHER = 'Weather';
   const HAMN_POLLUTANTS = [
@@ -221,7 +228,7 @@
     src: SOURCES[0], loaded: new Map(), series: new Map(), tMin: 0, tMax: 0,
     rangeDays: 7, res: 'auto',
     active: new Set(), slots: new Map(), // slots: station id -> colour token (HAMN picks)
-    tableView: new Set(), profilePol: 'NO2',
+    tableView: new Set(), profilePol: 'NO2', showAll: false,
   };
   const SLOT_COLORS = ['var(--s1)', 'var(--s2)', 'var(--s3)'];
   const stations = () => state.src.stations;
@@ -564,16 +571,24 @@
     const host = document.getElementById('current');
     host.textContent = '';
     const ministry = state.src.maxActive === Infinity;
-    const rowsFor = ministry ? activeStations() : stations();
+    const rowsFor = ministry || !state.showAll ? activeStations() : stations();
+    if (!ministry) {
+      host.append(el('button', {
+        type: 'button', class: 'link-btn', 'aria-pressed': String(state.showAll),
+        onclick: () => { state.showAll = !state.showAll; renderCurrent(); },
+      }, state.showAll ? 'Show only the selected stations' : `Show all ${stations().length} stations`));
+    }
     const groups = [...new Set(pollutants().map((p) => p.group))];
+    let any = false;
     for (const g of groups) {
       const pols = pollutants().filter((p) => p.group === g && rowsFor.some((st) => state.series.get(st.id + '|' + p.id)));
       const stationsHere = rowsFor.filter((st) => pols.some((p) => state.series.get(st.id + '|' + p.id)));
       if (!pols.length) continue;
+      any = true;
       if (groups.length > 1) host.append(el('h3', { class: 'group-title' }, g));
       const tbody = el('tbody');
       for (const st of stationsHere) {
-        const color = ministry || state.active.has(st.id) ? stationColor(st) : null;
+        const color = state.active.has(st.id) ? stationColor(st) : null;
         const key = el('span', { class: 'key' });
         if (color) key.style.background = color; else key.style.visibility = 'hidden';
         const row = el('tr', {}, el('th', { scope: 'row' }, key, st.name));
@@ -595,6 +610,66 @@
           pols.map((p) => el('th', { scope: 'col' }, ministry ? `${p.name} (${p.label})` : `${p.label} (${p.unit})`)))),
         tbody)));
     }
+    if (!any) host.append(el('p', { class: 'empty' }, 'The selected stations have no readings yet.'));
+  }
+
+  // Returns a short message when the click could not be applied.
+  function toggleStation(st) {
+    const limited = state.src.maxActive !== Infinity;
+    const on = state.active.has(st.id);
+    if (on && state.active.size === 1) return 'Keep at least one station selected.';
+    if (!on && limited && state.active.size >= state.src.maxActive) return `Charts show up to ${state.src.maxActive} stations. Deselect one first.`;
+    if (on) { state.active.delete(st.id); state.slots.delete(st.id); }
+    else {
+      state.active.add(st.id);
+      if (limited) state.slots.set(st.id, SLOT_COLORS.find((c) => ![...state.slots.values()].includes(c)));
+    }
+    renderAll();
+    return '';
+  }
+
+  /* ----- map (Leaflet + OpenStreetMap; the page works without it) ----- */
+
+  const mapState = { map: null, layer: null, srcId: null };
+  function renderMap() {
+    const box = document.getElementById('map-section');
+    if (!window.L) { box.hidden = true; return; }
+    box.hidden = false;
+    const L = window.L;
+    if (!mapState.map) {
+      mapState.map = L.map('map', { scrollWheelZoom: false });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(mapState.map);
+      mapState.layer = L.layerGroup().addTo(mapState.map);
+    }
+    const css = getComputedStyle(document.documentElement);
+    mapState.layer.clearLayers();
+    const pts = [];
+    for (const st of stations()) {
+      if (st.lat == null) continue;
+      const on = state.active.has(st.id);
+      const m = L.circleMarker([st.lat, st.lon], {
+        radius: on ? 10 : 7, weight: 2, color: '#ffffff', fillOpacity: on ? 0.95 : 0.85,
+        fillColor: on ? css.getPropertyValue(stationColor(st).replace(/var\((--[\w-]+)\)/, '$1')).trim() || '#2a78d6' : '#6b6a66',
+      });
+      m.bindTooltip(st.name + (st.note ? ' (mobile)' : ''), { direction: 'top' });
+      m.on('click', () => {
+        const msg = toggleStation(st);
+        const note = document.getElementById('map-note');
+        if (msg) note.textContent = msg;
+      });
+      m.addTo(mapState.layer);
+      pts.push([st.lat, st.lon]);
+    }
+    if (mapState.srcId !== state.src.id) {
+      mapState.srcId = state.src.id;
+      mapState.map.invalidateSize();
+      mapState.map.fitBounds(pts, { padding: [24, 24], maxZoom: 14 });
+    }
+    document.getElementById('map-note').textContent = state.src.maxActive === Infinity
+      ? 'Click a station to show or hide it.'
+      : `Click a station to add it to the charts (up to ${state.src.maxActive}), or click a selected one to remove it. Grey dots are not selected. You can also use the station buttons below the map.`;
   }
 
   function renderControls() {
@@ -618,15 +693,7 @@
       legend.append(el('button', {
         type: 'button', class: 'chip' + (on ? ' on' : ''), 'aria-pressed': String(on),
         title: full ? 'Deselect a station first' : '', ...(full ? { disabled: '' } : {}),
-        onclick: () => {
-          if (on && state.active.size === 1) return; // keep at least one station
-          if (on) { state.active.delete(st.id); state.slots.delete(st.id); }
-          else {
-            state.active.add(st.id);
-            if (limited) state.slots.set(st.id, SLOT_COLORS.find((c) => ![...state.slots.values()].includes(c)));
-          }
-          renderAll();
-        },
+        onclick: () => toggleStation(st),
       }, key, st.name));
     }
   }
@@ -655,6 +722,7 @@
   function renderAll() {
     renderSource();
     renderControls();
+    renderMap();
     renderSummary();
     renderCurrent();
     renderCharts();
