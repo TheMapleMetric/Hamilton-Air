@@ -1,0 +1,64 @@
+name: Collect Hamilton air quality data
+
+on:
+  schedule:
+    # 11:17 UTC every day (6:17 AM EST / 7:17 AM EDT)
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "How many past days to fetch (e.g. 365 to backfill a year)"
+        default: "9"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-air-quality
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run tests
+        run: python -m unittest discover -s collector -p "test_*.py"
+
+      # The two sources run separately so one site being down does not lose the other's data.
+      - name: Fetch Ministry readings
+        id: ministry
+        continue-on-error: true
+        run: python collector/collect.py --days "${{ inputs.days || '9' }}"
+
+      - name: Fetch HAMN readings
+        id: hamn
+        continue-on-error: true
+        run: python collector/collect_hamn.py --days "${{ inputs.days || '9' }}"
+
+      - name: Commit updated data
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/readings.csv data/hamn.csv
+          if git diff --cached --quiet; then
+            echo "No new data."
+          else
+            git commit -m "Update air quality data"
+            git push
+          fi
+
+      - name: Fail the run if a source failed
+        if: steps.ministry.outcome == 'failure' || steps.hamn.outcome == 'failure'
+        run: |
+          echo "Ministry: ${{ steps.ministry.outcome }}, HAMN: ${{ steps.hamn.outcome }}"
+          exit 1
