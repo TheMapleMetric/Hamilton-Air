@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Hamilton Police Service Newsroom</title>
+<item><title>Pedestrian Seriously Injured in Collision on Kenilworth</title>
+<link>https://hamiltonpolice.on.ca/news/pedestrian-seriously-injured-in-collision-on-kenilworth/</link>
+<pubDate>Fri, 06 Nov 2026 10:20:00 -0500</pubDate><description>full release text that must not be stored</description></item>
+<item><title>Hamilton Police Shut Down Another Illegal Cannabis Dispensary</title>
+<link>https://hamiltonpolice.on.ca/news/hamilton-police-shut-down-another-illegal-cannabis-dispensary/</link>
+<pubDate>Thu, 05 Nov 2026 13:32:00 -0500</pubDate></item>
+<item><title>Off-site link should be ignored</title><link>https://example.com/x</link><pubDate>Thu, 05 Nov 2026 13:32:00 -0500</pubDate></item>
+<item><title>Bad date</title><link>https://hamiltonpolice.on.ca/news/bad/</link><pubDate>not a date</pubDate></item>
+</channel></rss>
