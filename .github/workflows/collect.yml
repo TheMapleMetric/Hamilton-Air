@@ -33,7 +33,7 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s collector -p "test_*.py"
 
-      # The two sources run separately so one site being down does not lose the other's data.
+      # The sources run separately so one site being down does not lose the others' data.
       - name: Fetch Ministry readings
         id: ministry
         continue-on-error: true
@@ -44,12 +44,17 @@ jobs:
         continue-on-error: true
         run: python collector/collect_hamn.py --days "${{ inputs.days || '9' }}"
 
+      - name: Fetch police news headlines
+        id: news
+        continue-on-error: true
+        run: python collector/collect_news.py
+
       - name: Commit updated data
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/readings.csv data/hamn.csv
+          git add data/readings.csv data/hamn.csv data/police_news.json
           if git diff --cached --quiet; then
             echo "No new data."
           else
@@ -58,7 +63,7 @@ jobs:
           fi
 
       - name: Fail the run if a source failed
-        if: steps.ministry.outcome == 'failure' || steps.hamn.outcome == 'failure'
+        if: steps.ministry.outcome == 'failure' || steps.hamn.outcome == 'failure' || steps.news.outcome == 'failure'
         run: |
-          echo "Ministry: ${{ steps.ministry.outcome }}, HAMN: ${{ steps.hamn.outcome }}"
+          echo "Ministry: ${{ steps.ministry.outcome }}, HAMN: ${{ steps.hamn.outcome }}, News: ${{ steps.news.outcome }}"
           exit 1
