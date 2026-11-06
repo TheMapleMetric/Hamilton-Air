@@ -11,14 +11,20 @@ sources with a switch at the top of the page:
   benzene, PM2.5, PM10 and weather (temperature, humidity, pressure, wind, rain).
   Charts show up to three stations you pick; the tables cover all of them.
 
-Link straight to a view with `#hamn` or `#ministry` on the end of the address.
+A **Hamilton Police news** list shows the latest headlines and links from the police
+service's public newsroom feed (headline, date and link only; nothing is copied).
+
+Link straight to a view with `air.html#hamn` or `air.html#ministry`; the home page is the plain site address.
 
 ```
-index.html, dashboard.js    the dashboard (no build step, no libraries)
+index.html                  home page (Know Your Hamilton) linking to the sections
+air.html, dashboard.js      Breathe Check: the air dashboard (no build step)
+news.html                   The Beat: police newsroom headlines
 data/readings.csv           Ministry history; one row per day, station and pollutant
 data/hamn.csv               HAMN history, same layout
 collector/collect.py        downloads the Ministry readings and adds them to the CSV
 collector/collect_hamn.py   does the same for HAMN
+collector/collect_news.py   saves police newsroom headlines to data/police_news.json
 .github/workflows/collect.yml   runs the collector every morning on GitHub
 ```
 
