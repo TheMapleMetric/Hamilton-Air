@@ -3,113 +3,209 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Know Your Hamilton</title>
+<title>Hamilton Air Quality</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
   :root {
     color-scheme: light;
     --page: #f9f9f7; --surface: #fcfcfb;
     --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
-    --ring: rgba(11,11,11,.10); --wash: rgba(11,11,11,.05);
-    --s1: #2a78d6; --accent: #1b5fb0;
+    --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,.10); --wash: rgba(11,11,11,.05);
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+    --crit: #d03b3b; --flag-text: #b32d2d;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
       --page: #0d0d0d; --surface: #1a1a19;
       --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
-      --ring: rgba(255,255,255,.10); --wash: rgba(255,255,255,.07);
-      --s1: #3987e5; --accent: #7db4f2;
+      --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10); --wash: rgba(255,255,255,.07);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+      --crit: #d03b3b; --flag-text: #ee6a6a;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
     --page: #0d0d0d; --surface: #1a1a19;
     --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
-    --ring: rgba(255,255,255,.10); --wash: rgba(255,255,255,.07);
-    --s1: #3987e5; --accent: #7db4f2;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,.10); --wash: rgba(255,255,255,.07);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --crit: #d03b3b; --flag-text: #ee6a6a;
   }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 1000px; margin: 0 auto; padding: 28px 16px 48px; }
-  h1 { font-size: 32px; line-height: 1.15; margin: 0 0 6px; text-wrap: balance; }
-  h2 { font-size: 18px; margin: 0 0 4px; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 32px 0 12px; }
+  h3 { font-size: 16px; margin: 0; }
   p { margin: 0; }
-  a { color: var(--accent); }
-  .lede { color: var(--ink2); max-width: 60ch; }
-  .note { color: var(--ink2); font-size: 13px; }
-  .when { color: var(--ink2); font-size: 13px; }
-  :focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 16px; margin-top: 28px; }
-  .tile { display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 18px; color: inherit; text-decoration: none; min-width: 0; }
-  a.tile:hover { background: var(--wash); }
-  .tile .kicker { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); }
-  .tile p { color: var(--ink2); font-size: 15px; }
-  .tile .live { color: var(--ink); font-size: 14px; margin-top: 4px; overflow-wrap: anywhere; }
-  .tile .go { margin-top: auto; padding-top: 8px; color: var(--accent); font-weight: 600; font-size: 14px; }
-  .tile.soon { opacity: .7; border-style: dashed; }
-  footer { margin-top: 40px; display: grid; gap: 6px; }
+  .lede { color: var(--ink2); }
+  .muted, .sub, .note, .when, .unit { color: var(--ink2); }
+  .sub { font-size: 13px; margin-top: 2px; }
+  .note { font-size: 13px; margin-top: 8px; }
+  .status { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px; margin-top: 16px; }
+
+  /* filter row */
+  .filters { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 20px 0 16px; }
+  .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .group > .label { font-size: 13px; color: var(--ink2); margin-right: 2px; }
+  button, select { font: inherit; color: var(--ink); }
+  .seg, .chip {
+    background: transparent; border: 1px solid var(--ring); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .seg:hover, .chip:hover, .link-btn:hover { background: var(--wash); }
+  .seg.on { border-color: var(--ink2); font-weight: 600; }
+  .chip:not(.on) { color: var(--ink2); }
+  .chip:not(.on) .key { opacity: .35; }
+  .chip.on { border-color: var(--ink2); }
+  .check { font-weight: 700; margin-right: 4px; }
+  select { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 6px 8px; }
+  button:focus-visible, select:focus-visible, svg.chart:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+  .key { display: inline-block; width: 14px; height: 3px; border-radius: 2px; flex: none; vertical-align: middle; }
+
+  /* cards */
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px; min-width: 0; }
+  .card-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+  .link-btn { background: none; border: 0; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: var(--ink2); text-decoration: underline; flex: none; }
+  .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); gap: 16px; }
+
+  /* hero */
+  .hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; }
+  .hero-value { font-size: 56px; line-height: 1; font-weight: 700; }
+  .hero-label { font-weight: 600; }
+  .hero-detail { margin-top: 8px; color: var(--ink2); }
+
+  /* charts */
+  .chart-host { position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid { stroke: var(--grid); stroke-width: 1; }
+  .axis { stroke: var(--axis); stroke-width: 1; }
+  .tick { fill: var(--muted); font-size: 11px; }
+  .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .dot { stroke: var(--surface); stroke-width: 2; }
+  .cross { stroke: var(--axis); stroke-width: 1; }
+  .overlay { fill: transparent; touch-action: pan-y; cursor: crosshair; }
+  .guide { stroke: var(--crit); stroke-width: 1; }
+  .guide-label { fill: var(--ink2); font-size: 11px; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 8px; padding: 8px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); font-size: 13px; white-space: nowrap; z-index: 2;
+  }
+  .tooltip[hidden] { display: none; }
+  .tip-head { color: var(--ink2); margin-bottom: 4px; }
+  .tip-row { display: flex; align-items: center; gap: 8px; }
+  .tip-row strong { min-width: 5.5em; }
+  .tip-name { color: var(--ink2); }
+  .empty { color: var(--ink2); padding: 32px 0; text-align: center; }
+
+  /* tables */
+  .table-scroll { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  thead th { color: var(--ink2); font-weight: 600; font-size: 13px; position: sticky; top: 0; background: var(--surface); }
+  th[scope="row"] { font-weight: 600; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  thead th.num { text-align: right; }
+  .when { font-size: 12px; }
+  .flag { color: var(--flag-text); font-weight: 600; font-size: 13px; }
+  .wide-scroll { overflow-x: auto; }
+  th .key, td .key { margin-right: 8px; }
+  footer { margin-top: 32px; color: var(--ink2); font-size: 13px; display: grid; gap: 6px; }
+  footer a { color: inherit; }
+  .group-title { grid-column: 1 / -1; font-size: 15px; color: var(--ink2); margin: 8px 0 0; }
+  #current { display: grid; gap: 12px; }
+  #current .group-title { margin: 8px 0 -4px; }
+  #map { height: 360px; border-radius: 12px; border: 1px solid var(--ring); z-index: 0; }
+  #map-section { margin-top: 8px; }
+  .chip[disabled] { opacity: .65; cursor: not-allowed; }
+  @media (max-width: 560px) {
+    .hero-value { font-size: 48px; }
+    .card { padding: 12px; }
+  }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Know Your Hamilton</h1>
-    <p class="lede">The air you breathe, the news on your streets and the facts about your neighbourhood, from public data, in plain language.</p>
+    <h1>Hamilton air quality</h1>
+    <p class="lede"><span id="lede-text"></span> Latest reading: <span id="updated">loading…</span></p>
   </header>
 
-  <section class="tiles" aria-label="Sections">
-    <a class="tile" href="air.html">
-      <span class="kicker">Air</span>
-      <h2>Breathe Check</h2>
-      <p>Hourly air readings from 23 monitoring stations across Hamilton, with a station map and charts.</p>
-      <span class="go">Check the air &rarr;</span>
-    </a>
+  <p id="status" class="status" role="alert" hidden></p>
 
-    <a class="tile" href="news.html">
-      <span class="kicker">Police news</span>
-      <h2>The Beat</h2>
-      <p>The latest headlines from the Hamilton Police Service newsroom, with links to the full releases.</p>
-      <p class="live" id="beat-live"></p>
-      <span class="go">Read the headlines &rarr;</span>
-    </a>
-
-    <a class="tile" href="https://www.communitycrimemap.com/?address=Hamilton,ON&amp;crimeTypes=%5B1,6,7,10,11,16,17%5D&amp;startDate=14&amp;zoom=12" target="_blank" rel="noopener">
-      <span class="kicker">Crime map</span>
-      <h2>Street Watch</h2>
-      <p>The police service's own crime map for Hamilton. It opens in a new tab and is not part of this site's data.</p>
-      <span class="go">Open the map &#8599;</span>
-    </a>
-
-    <div class="tile soon" aria-disabled="true">
-      <span class="kicker">Census &middot; coming soon</span>
-      <h2>Hood Numbers</h2>
-      <p>Who lives where: population, age, income and housing for each Hamilton neighbourhood, from Statistics Canada.</p>
+  <div id="app" hidden>
+    <div class="filters">
+      <div class="group" id="source" role="group" aria-label="Monitoring network"></div>
+    </div>
+    <div id="dash">
+    <section id="map-section" hidden>
+      <h2>Station map</h2>
+      <div id="map" role="application" aria-label="Map of monitoring stations. Station buttons are also available below the map."></div>
+      <p class="note" id="map-note"></p>
+    </section>
+    <div class="filters">
+      <div class="group" id="range" role="group" aria-label="Date range"></div>
+      <div class="group"><label class="label" for="resolution">Chart detail</label><select id="resolution"></select></div>
+      <div class="group" id="legend" role="group" aria-label="Stations"></div>
     </div>
 
-    <a class="tile" href="https://hoodq.com/" target="_blank" rel="noopener">
-      <span class="kicker">Neighbourhood guides</span>
-      <h2>Hood Guide</h2>
-      <p>HoodQ's neighbourhood profiles: schools, parks, transit and housing. An outside site with its own terms.</p>
-      <span class="go">Browse HoodQ &#8599;</span>
-    </a>
-  </section>
+    <section class="card" aria-labelledby="hero-label">
+      <div class="hero">
+        <div class="hero-value" id="hero-value">0</div>
+        <div>
+          <div class="hero-label" id="hero-label">Hours above Ontario 1-hour guidelines</div>
+          <div class="sub" id="hero-range"></div>
+        </div>
+      </div>
+      <p class="hero-detail" id="hero-detail"></p>
+    </section>
 
-  <footer class="note">
-    <p>Know Your Hamilton is an independent community project built on public data. It is not affiliated with, or endorsed by, the City of Hamilton, the Hamilton Police Service, the Hamilton Air Monitoring Network or the Ontario Ministry of the Environment, Conservation and Parks.</p>
-    <p>Data is collected automatically and can be incomplete or change later. Check official sources before making decisions about your health or safety.</p>
-  </footer>
+    <h2>Latest readings</h2>
+    <div id="current"></div>
+
+    <h2>Trends</h2>
+    <div class="grid-cards" id="charts"></div>
+
+    <h2>Typical day</h2>
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3>Pattern by hour of day</h3>
+          <p class="sub" id="profile-sub"></p>
+        </div>
+        <button type="button" class="link-btn" id="profile-toggle">Show table</button>
+      </div>
+      <div class="group" style="margin-bottom:8px"><label class="label" for="profile-pol">Pollutant</label><select id="profile-pol"></select></div>
+      <div id="profile-chart"></div>
+    </article>
+
+    <h2>Station comparison</h2>
+    <div class="card wide-scroll">
+      <table>
+        <thead><tr>
+          <th scope="col">Pollutant</th><th scope="col">Station</th>
+          <th scope="col" class="num">Mean</th><th scope="col" class="num">Median</th><th scope="col" class="num">95th percentile</th>
+          <th scope="col" class="num">Peak</th><th scope="col">Peak hour</th>
+          <th scope="col" class="num">Hours above guideline</th><th scope="col" class="num">Data coverage</th>
+        </tr></thead>
+        <tbody id="summary-body"></tbody>
+      </table>
+    </div>
+    <p class="note">Peak, mean and the other figures use hourly readings in the selected date range. Data coverage is the share of hours with a reading since each station's first reading in the range.</p>
+
+    <footer>
+      <p id="source-note"></p>
+      <p id="guide-note"></p>
+    </footer>
+    </div>
+  </div>
 </main>
-<script>
-  (async function () {
-    try {
-      const r = await fetch('data/police_news.json', { cache: 'no-store' });
-      if (!r.ok) return;
-      const d = await r.json();
-      const i = (d.items || [])[0];
-      if (!i || !/^https:\/\/hamiltonpolice\.on\.ca\//.test(i.link)) return;
-      document.getElementById('beat-live').textContent = 'Latest: ' + i.title;
-    } catch (e) { /* the tile just shows without a headline */ }
-  })();
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="dashboard.js"></script>
 </body>
 </html>
