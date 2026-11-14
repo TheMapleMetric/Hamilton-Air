@@ -33,7 +33,7 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s collector -p "test_*.py"
 
-      # The sources run separately so one site being down does not lose the others' data.
+      # The two sources run separately so one site being down does not lose the other's data.
       - name: Fetch Ministry readings
         id: ministry
         continue-on-error: true
@@ -44,17 +44,15 @@ jobs:
         continue-on-error: true
         run: python collector/collect_hamn.py --days "${{ inputs.days || '9' }}"
 
-      - name: Fetch police news headlines
-        id: news
-        continue-on-error: true
-        run: python collector/collect_news.py
+      # Police news is paused: the police moved to hamiltonpolice.ca and the old
+      # newsroom feed no longer exists. Re-add collect_news.py here once a feed is available.
 
       - name: Commit updated data
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/readings.csv data/hamn.csv data/police_news.json
+          git add data/readings.csv data/hamn.csv
           if git diff --cached --quiet; then
             echo "No new data."
           else
@@ -63,7 +61,7 @@ jobs:
           fi
 
       - name: Fail the run if a source failed
-        if: steps.ministry.outcome == 'failure' || steps.hamn.outcome == 'failure' || steps.news.outcome == 'failure'
+        if: steps.ministry.outcome == 'failure' || steps.hamn.outcome == 'failure'
         run: |
-          echo "Ministry: ${{ steps.ministry.outcome }}, HAMN: ${{ steps.hamn.outcome }}, News: ${{ steps.news.outcome }}"
+          echo "Ministry: ${{ steps.ministry.outcome }}, HAMN: ${{ steps.hamn.outcome }}"
           exit 1
